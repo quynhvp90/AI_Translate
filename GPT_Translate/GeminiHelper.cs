@@ -21,7 +21,7 @@ namespace GPT_Translate
         public async Task<string> SendMessageAsync(string message)
         {
             var url =
-                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_apiKey}";
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={_apiKey}";
 
             var requestBody = new
             {
