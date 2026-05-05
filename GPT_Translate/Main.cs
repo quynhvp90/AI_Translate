@@ -5,58 +5,70 @@ namespace GPT_Translate
 {
     public partial class Main : Form
     {
-        private readonly GeminiHelper _helper;
+        private readonly OllamaHelper _helper;
         private List<SubtitleItem> _subtitles = new List<SubtitleItem>();
         public Main()
         {
             InitializeComponent();
-            string apiKey = Helper.Decrypt(Constants.GoogleApiKey);
-            _helper = new GeminiHelper(apiKey);
+            //string apiKey = Helper.Decrypt(Constants.GoogleApiKey);
+            _helper = new OllamaHelper();
         }
 
         private async void buttonTranslate_ClickAsync(object sender, EventArgs e)
         {
             _subtitles = new List<SubtitleItem>();
             richTextBoxOutput.Clear();
-            // convert to list of subtitle items
-            if (string.IsNullOrWhiteSpace(richTextBoxInput.Text))
-                return;
-            _subtitles = Helper.ParseSubtitle(richTextBoxInput.Text);
-            if (_subtitles.Count == 0)
+            buttonDecrypt.Enabled = false;
+            buttonEncrypted.Enabled = false;
+            buttonTranslate.Enabled = false;
+            try
             {
-                MessageBox.Show("No valid subtitle items found. Please check the input format.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            string textToTranslate = "";// string.Join("|", _subtitles.Select(s => s.Text));
-
-            string defaultChat = $"Dịch sang tiếng việt, chỉ dịch và giữ nguyên format giữ nguyên dấu | và không giải thích gì thêm: ";
-            int batchSize = 0; // Số lượng subtitle mỗi batch
-            for (int i = 0; i < _subtitles.Count; i++)
-            {
-                textToTranslate += _subtitles[i].Text;
-                batchSize++;
-                if (i < _subtitles.Count - 1)
-                    textToTranslate += " | ";
-                if (batchSize >= 10 || i == _subtitles.Count - 1) // Gửi mỗi batch sau khi đạt đến batchSize hoặc khi là batch cuối cùng
+                // convert to list of subtitle items
+                if (string.IsNullOrWhiteSpace(richTextBoxInput.Text))
+                    return;
+                _subtitles = Helper.ParseSubtitle(richTextBoxInput.Text);
+                if (_subtitles.Count == 0)
                 {
-                    string inputChat = defaultChat + textToTranslate;
-                    var result = await _helper.SendMessageAsync(inputChat);
-                    string[] translatedTexts = result.Split('|');
-                    for (int j = 0; j < batchSize; j++)
-                    {
-                        int index = i - batchSize + 1 + j;
-                        if (index < _subtitles.Count && j < translatedTexts.Length)
-                        {
-                            _subtitles[index].Text = translatedTexts[j].Trim();
-                            richTextBoxOutput.AppendText($"{_subtitles[index].No}\n{_subtitles[index].Time}\n{_subtitles[index].Text}\n\n");
-                        }
-                    }
-                    // Reset cho batch tiếp theo
-                    textToTranslate = "";
-                    batchSize = 0;
-                    // add delay 1s
-                    await Task.Delay(2500);
+                    MessageBox.Show("No valid subtitle items found. Please check the input format.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
+                string textToTranslate = "";// string.Join("|", _subtitles.Select(s => s.Text));
+
+                string defaultChat = $"Dịch sang tiếng việt, chỉ dịch và giữ nguyên format giữ nguyên dấu | và không giải thích gì thêm: ";
+                int batchSize = 0; // Số lượng subtitle mỗi batch
+                for (int i = 0; i < _subtitles.Count; i++)
+                {
+                    textToTranslate += _subtitles[i].Text;
+                    batchSize++;
+                    if (i < _subtitles.Count - 1)
+                        textToTranslate += " | ";
+                    if (batchSize >= 10 || i == _subtitles.Count - 1) // Gửi mỗi batch sau khi đạt đến batchSize hoặc khi là batch cuối cùng
+                    {
+                        string inputChat = defaultChat + textToTranslate;
+                        var result = await _helper.SendMessageAsync(inputChat);
+                        string[] translatedTexts = result.Split('|');
+                        for (int j = 0; j < batchSize; j++)
+                        {
+                            int index = i - batchSize + 1 + j;
+                            if (index < _subtitles.Count && j < translatedTexts.Length)
+                            {
+                                _subtitles[index].Text = translatedTexts[j].Trim();
+                                richTextBoxOutput.AppendText($"{_subtitles[index].No}\n{_subtitles[index].Time}\n{_subtitles[index].Text}\n\n");
+                            }
+                        }
+                        // Reset cho batch tiếp theo
+                        textToTranslate = "";
+                        batchSize = 0;
+                        // add delay 1s
+                        await Task.Delay(2500);
+                    }
+                }
+            }
+            finally
+            {
+                buttonDecrypt.Enabled = true;
+                buttonEncrypted.Enabled = true;
+                buttonTranslate.Enabled = true;
             }
         }
         private async Task OpenAITranslateAsync(string input)
